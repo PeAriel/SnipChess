@@ -2,7 +2,7 @@ import sys
 from PyQt5.QtCore import QRect
 
 from PyQt5.QtCore import QSize, Qt 
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtWidgets import (QAction, QApplication, QCheckBox, QComboBox,
                             QLabel, QDialog, QDialogButtonBox,
                             QSystemTrayIcon, QLineEdit, QMainWindow, QMenu,
@@ -10,6 +10,7 @@ from PyQt5.QtWidgets import (QAction, QApplication, QCheckBox, QComboBox,
                             )
 
 from utils import SnippingTool
+from fen2png import DrawBoard
 
 
 class FenOptionsWindow(QDialog):
@@ -18,54 +19,78 @@ class FenOptionsWindow(QDialog):
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setWindowState(Qt.WindowState.WindowActive)
 
-        self.fen = fen
-
         self.setWindowTitle('Additional Options')
-        self.setModal(True)
+        # self.setModal(True)
         self.mainLayout = QVBoxLayout()
+
+        self.origFen = fen
+        self.fen = fen
+        self.fenSpecs = ['' if i % 2 != 0 else ' ' for i in range(10)]
+        self.fenSpecs[1] = 'w'
+        self.fenSpecs[3] = 'KQkq'
 
         self.addHowPlays()
         self.addCasteling()
+        self.addBoard(fen)
         self.addFenLineEdit()
         self.addButtons()
 
-        self.fenLineEdit.setText(self.fen)
+        self.whoPlaysComboBox.currentIndexChanged.connect(self.configChanged)
+        self.whiteOO.stateChanged.connect(self.configChanged)
+        self.whiteOOO.stateChanged.connect(self.configChanged)
+        self.blackOO.stateChanged.connect(self.configChanged)
+        self.blackOOO.stateChanged.connect(self.configChanged)
+
+        self.fenLineEdit.setText(self.origFen + ''.join(self.fenSpecs))
+        self.fenLineEdit.textChanged.connect(self.changeFenAndBoard)
 
         self.buttonBox.accepted.connect(self.okPressed)
         self.buttonBox.rejected.connect(self.reject)
 
         self.setLayout(self.mainLayout)
 
+    def configChanged(self):
+        if self.whoPlaysComboBox.currentIndex() == 0:
+            self.fenSpecs[1] = 'w'
+        else:
+            self.fenSpecs[1] = 'b'
+        
+        castlingPart = []
+        if all([not self.whiteOO.isChecked(),
+                not self.whiteOOO.isChecked(),
+                not self.blackOO.isChecked(),
+                not self.blackOOO.isChecked()]):
+            self.fenSpecs[3] = '-'
+        else:
+            if self.whiteOO.isChecked():
+                castlingPart.append('K')
+            if self.whiteOOO.isChecked():
+                castlingPart.append('Q')
+            if self.blackOO.isChecked():
+                castlingPart.append('k')
+            if self.blackOOO.isChecked():
+                castlingPart.append('q')
+            self.fenSpecs[3] = ''.join(castlingPart)
+            
+        self.fen = self.origFen + ''.join(self.fenSpecs)
+        self.fenLineEdit.setText(self.fen)
+        board = DrawBoard(self.fen)
+        self.boardLabel.setPixmap(board.boardQPixmap())
+
+
     def okPressed(self):
         self.accept()
-        if self.whoPlaysComboBox.currentIndex() == 0:
-            self.fen += ' w'
-        else:
-            self.fen += ' b'
-        
-        castlingFen = []
-        if all([self.whiteOO.isChecked(),
-                self.whiteOOO.isChecked(),
-                self.blackOO.isChecked(),
-                self.blackOOO.isChecked()]):
-            self.fen += ' -'
-        else:
-            castlingFen.append(' ')
-            if self.whiteOO.isChecked():
-                castlingFen.append('K')
-            if self.whiteOOO.isChecked():
-                castlingFen.append('Q')
-            if self.blackOO.isChecked():
-                castlingFen.append('k')
-            if self.blackOOO.isChecked():
-                castlingFen.append('q')
-            self.fen += ''.join(castlingFen)
         
         cb = QApplication.clipboard()
         cb.clear(mode=cb.Clipboard)
         cb.setText(self.fen, mode=cb.Clipboard)
 
         self.close()
+
+    def changeFenAndBoard(self, text):
+        self.fen = text
+        board = DrawBoard(self.fen)
+        self.boardLabel.setPixmap(board.boardQPixmap())
 
     def addFenLineEdit(self):
         fenLineEditLayout = QHBoxLayout()
@@ -88,7 +113,7 @@ class FenOptionsWindow(QDialog):
 
     def addCasteling(self):
         castelingLayout = QHBoxLayout()
-        whiteLayout = QGridLayout()
+        whiteLayout = QVBoxLayout()
         blackLayout = QVBoxLayout()
         questionLayout = QVBoxLayout()
 
@@ -106,9 +131,9 @@ class FenOptionsWindow(QDialog):
         self.blackOO.setChecked(True)
         self.blackOOO.setChecked(True)
 
-        whiteLayout.addWidget(QLabel('White'), 0, 0)
-        whiteLayout.addWidget(self.whiteOO, 1, 0)
-        whiteLayout.addWidget(self.whiteOOO, 2, 0)
+        whiteLayout.addWidget(QLabel('White'))
+        whiteLayout.addWidget(self.whiteOO)
+        whiteLayout.addWidget(self.whiteOOO)
         blackLayout.addWidget(QLabel('Black'))
         blackLayout.addWidget(self.blackOO)
         blackLayout.addWidget(self.blackOOO)
@@ -121,6 +146,15 @@ class FenOptionsWindow(QDialog):
         castelingLayout.addLayout(questionLayout)
 
         self.mainLayout.addLayout(castelingLayout)
+
+    def addBoard(self, currentFen):
+        self.boardLabel = QLabel()
+
+        board = DrawBoard(currentFen)
+
+        self.boardLabel.setPixmap(board.boardQPixmap())
+
+        self.mainLayout.addWidget(self.boardLabel)
 
 
 class MainWindow(QMainWindow):

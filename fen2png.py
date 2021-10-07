@@ -1,9 +1,13 @@
-from PIL import Image
 import os
+
+from PIL import Image
+import numpy as np
+from PyQt5.QtGui import QImage, QPixmap
 
 PIECES = "RBNQKPrbnqkp"
 PIECES_DICT = {i: ("b" if i.islower() else "w") + i.lower() for i in PIECES}
 ICONS = "resources/pieces/"
+
 
 def is_int(val):
     """
@@ -18,14 +22,13 @@ def is_int(val):
 
 
 class DrawBoard:
-    def __init__(self, fen, theme, square_size=40):
+    def __init__(self, fen, square_size=40):
         self.dir = os.getcwd() + '/'
         self.fen = fen.split()[0]
-        self.theme = theme
         self.square_size = square_size
         self.piece_size = (square_size, square_size)
         self.board_size = (square_size * 8, square_size * 8)
-        self.output = Image.open(self.dir + ICONS + theme + '/board.png').resize(self.board_size)
+        self.output = Image.open(self.dir + ICONS + '/board.png').resize(self.board_size)
 
     def _get_piece_positions(self):
         board = [["" for _ in range(8)] for _ in range(8)]
@@ -42,7 +45,7 @@ class DrawBoard:
         return board
 
     def _insert_piece(self, coordinate, piece):
-        piece_img = Image.open(self.dir + ICONS + self.theme + '/' + PIECES_DICT.get(piece) + '.png')
+        piece_img = Image.open(self.dir + ICONS + '/' + PIECES_DICT.get(piece) + '.png')
         piece_img = piece_img.resize(self.piece_size)
         X = coordinate[1] * self.square_size
         Y = coordinate[0] * self.square_size
@@ -55,13 +58,16 @@ class DrawBoard:
                 if positions[i][j]:
                     self._insert_piece((i, j), positions[i][j])
 
-    def save_board(self, out_path):
+    def boardQPixmap(self):
         self._add_pieces()
-        if '.png' not in out_path:
-            out_path += '.png'
-        try:
-            self.output.save(out_path)
-        except FileNotFoundError:
-            new_folder = '/'.join(out_path.split('/')[:-1])
-            os.system('mkdir {}'.format(new_folder))
-            self.output.save(out_path)
+        pil_image = self.output.convert('RGB') 
+        cv_image = np.array(pil_image) 
+        # Convert RGB to BGR 
+        cvImg = cv_image[:, :, ::-1].copy()
+
+        height, width, channel = cvImg.shape
+        bytesPerLine = 3 * width
+        qImg = QImage(cvImg.data, width, height, bytesPerLine, QImage.Format_RGB888)
+        qPixmap = QPixmap.fromImage(qImg)
+        return qPixmap
+        
