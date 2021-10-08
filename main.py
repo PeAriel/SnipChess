@@ -4,7 +4,7 @@ from PyQt5.QtCore import QRect
 from PyQt5.QtCore import QSize, Qt 
 from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtWidgets import (QAction, QApplication, QCheckBox, QComboBox,
-                            QLabel, QDialog, QDialogButtonBox,
+                            QLabel, QDialog, QDialogButtonBox, QPushButton,
                             QSystemTrayIcon, QLineEdit, QMainWindow, QMenu,
                             QHBoxLayout, QVBoxLayout, QGridLayout
                             )
@@ -41,13 +41,23 @@ class FenOptionsWindow(QDialog):
         self.blackOO.stateChanged.connect(self.configChanged)
         self.blackOOO.stateChanged.connect(self.configChanged)
 
+        self.configChanged()
         self.fenLineEdit.setText(self.origFen + ''.join(self.fenSpecs))
-        self.fenLineEdit.textChanged.connect(self.changeFenAndBoard)
+        self.fenUpdateButton.clicked.connect(self.updateFenAndBoard)
 
         self.buttonBox.accepted.connect(self.okPressed)
         self.buttonBox.rejected.connect(self.reject)
 
         self.setLayout(self.mainLayout)
+
+    def okPressed(self):
+        self.accept()
+        
+        cb = QApplication.clipboard()
+        cb.clear(mode=cb.Clipboard)
+        cb.setText(self.fen, mode=cb.Clipboard)
+
+        self.close()
 
     def configChanged(self):
         if self.whoPlaysComboBox.currentIndex() == 0:
@@ -74,21 +84,9 @@ class FenOptionsWindow(QDialog):
             
         self.fen = self.origFen + ''.join(self.fenSpecs)
         self.fenLineEdit.setText(self.fen)
-        board = DrawBoard(self.fen)
-        self.boardLabel.setPixmap(board.boardQPixmap())
 
-
-    def okPressed(self):
-        self.accept()
-        
-        cb = QApplication.clipboard()
-        cb.clear(mode=cb.Clipboard)
-        cb.setText(self.fen, mode=cb.Clipboard)
-
-        self.close()
-
-    def changeFenAndBoard(self, text):
-        self.fen = text
+    def updateFenAndBoard(self):
+        self.fen = self.fenLineEdit.text()
         board = DrawBoard(self.fen)
         self.boardLabel.setPixmap(board.boardQPixmap())
 
@@ -96,8 +94,10 @@ class FenOptionsWindow(QDialog):
         fenLineEditLayout = QHBoxLayout()
         fenLabel = QLabel('FEN: ')
         self.fenLineEdit = QLineEdit()
+        self.fenUpdateButton = QPushButton('Update FEN')
         fenLineEditLayout.addWidget(fenLabel)
         fenLineEditLayout.addWidget(self.fenLineEdit)
+        fenLineEditLayout.addWidget(self.fenUpdateButton)
         self.mainLayout.addLayout(fenLineEditLayout)
 
     def addHowPlays(self):
@@ -149,11 +149,8 @@ class FenOptionsWindow(QDialog):
 
     def addBoard(self, currentFen):
         self.boardLabel = QLabel()
-
         board = DrawBoard(currentFen)
-
         self.boardLabel.setPixmap(board.boardQPixmap())
-
         self.mainLayout.addWidget(self.boardLabel)
 
 
