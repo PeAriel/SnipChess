@@ -13,13 +13,14 @@ from utils import SnippingTool
 from fen2png import DrawBoard
 
 
-class FenOptionsWindow(QDialog):
+class FenSettingsWindow(QDialog):
     def __init__(self, fen):
         super().__init__()
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setWindowState(Qt.WindowState.WindowActive)
+        self.setFixedSize(QSize(735, 557))
 
-        self.setWindowTitle('Additional Options')
+        self.setWindowTitle('FEN Settings')
         # self.setModal(True)
         self.mainLayout = QVBoxLayout()
 
@@ -88,28 +89,13 @@ class FenOptionsWindow(QDialog):
     def updateFenAndBoard(self):
         self.fen = self.fenLineEdit.text()
         board = DrawBoard(self.fen)
-        self.boardLabel.setPixmap(board.boardQPixmap())
-
-    def addFenLineEdit(self):
-        fenLineEditLayout = QHBoxLayout()
-        fenLabel = QLabel('FEN: ')
-        self.fenLineEdit = QLineEdit()
-        self.fenUpdateButton = QPushButton('Update FEN')
-        fenLineEditLayout.addWidget(fenLabel)
-        fenLineEditLayout.addWidget(self.fenLineEdit)
-        fenLineEditLayout.addWidget(self.fenUpdateButton)
-        self.mainLayout.addLayout(fenLineEditLayout)
+        self.boardImage.setPixmap(board.boardQPixmap())
 
     def addHowPlays(self):
         self.whoPlaysComboBox = QComboBox()
         self.whoPlaysComboBox.addItem('White to play')
         self.whoPlaysComboBox.addItem('Black to play')
         self.mainLayout.addWidget(self.whoPlaysComboBox)
-        
-    def addButtons(self):
-        buttons = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
-        self.buttonBox = QDialogButtonBox(buttons)
-        self.mainLayout.addWidget(self.buttonBox)
 
     def addCasteling(self):
         castelingLayout = QHBoxLayout()
@@ -144,14 +130,40 @@ class FenOptionsWindow(QDialog):
         castelingLayout.addLayout(whiteLayout)
         castelingLayout.addLayout(blackLayout)
         castelingLayout.addLayout(questionLayout)
+        castelingLayout.setAlignment(Qt.AlignHCenter)
 
         self.mainLayout.addLayout(castelingLayout)
 
     def addBoard(self, currentFen):
-        self.boardLabel = QLabel()
+        self.boardImage = QLabel()
         board = DrawBoard(currentFen)
-        self.boardLabel.setPixmap(board.boardQPixmap())
-        self.mainLayout.addWidget(self.boardLabel)
+        self.boardImage.setPixmap(board.boardQPixmap())
+        self.boardImage.setAlignment(Qt.AlignHCenter)
+
+
+        self.mainLayout.addWidget(self.boardImage)
+
+    def addFenLineEdit(self):
+        fenLineEditLayout = QHBoxLayout()
+        fenLabel = QLabel('FEN: ')
+        self.fenLineEdit = QLineEdit()
+        self.fenLineEdit.setReadOnly(True)
+        self.fenUpdateButton = QPushButton('Update FEN')
+
+
+        fenLineEditLayout.addWidget(fenLabel)
+        fenLineEditLayout.addWidget(self.fenLineEdit)
+        fenLineEditLayout.addWidget(self.fenUpdateButton)
+
+        fenLineEditLayout.setAlignment(Qt.AlignHCenter)
+
+        self.mainLayout.addLayout(fenLineEditLayout)
+
+    def addButtons(self):
+        buttons = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+        self.buttonBox = QDialogButtonBox(buttons)
+        self.mainLayout.addWidget(self.buttonBox)
+
 
 
 class MainWindow(QMainWindow):
@@ -188,7 +200,7 @@ class MainWindow(QMainWindow):
         snipping_tool.show()
         snipping_tool.exec_()
 
-        self.optsWindow = FenOptionsWindow(snipping_tool.fen)
+        self.optsWindow = FenSettingsWindow(snipping_tool.fen)
         self.optsWindow.show()
 
 
