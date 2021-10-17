@@ -1,11 +1,13 @@
+import PyQt5
 import numpy as np
 import cv2
 
-from PyQt5.QtCore import QRect, Qt
+from PyQt5.QtCore import QRect, Qt, pyqtSignal
 from PyQt5.QtGui import QColor, QPainter, QPainterPath, QPixmap
-from PyQt5.QtWidgets import QApplication, QDialog
+from PyQt5.QtWidgets import QApplication, QDialog, QLabel
 
 from png2fen import evaluate, visualize_regions
+from fen2png import DrawBoard
 
 
 def pixmap2array(pixmap):
@@ -68,3 +70,32 @@ class SnippingTool(QDialog):
         return desktopPixmap
 
 
+class BoardWidget(QLabel):
+    leftClick = pyqtSignal(float, float)
+    moved = pyqtSignal(float, float)
+
+    def __init__(self, currentFen, squareSize=40):
+        self.squareSize = squareSize
+        super().__init__()
+
+        board = DrawBoard(currentFen, square_size=self.squareSize)
+        self.boardPixmap = board.boardQPixmap()
+        self.setPixmap(self.boardPixmap)
+        self.setAlignment(Qt.AlignHCenter)
+
+        
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.RightButton:
+            heightMargin = (self.rect().height() - self.pixmap().rect().height()) // 2
+            widthMargin = (self.rect().width() - self.pixmap().rect().width()) // 2
+            self.leftClick.emit(event.x() - widthMargin, event.y() - heightMargin)
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        heightMargin = (self.rect().height() - self.pixmap().rect().height()) // 2
+        widthMargin = (self.rect().width() - self.pixmap().rect().width()) // 2
+        self.moved.emit(event.x() - widthMargin, event.y() - heightMargin)
+        super().mouseMoveEvent(event)
+
+        

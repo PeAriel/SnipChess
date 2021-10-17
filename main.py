@@ -1,4 +1,5 @@
 import sys
+from time import sleep
 from PyQt5.QtCore import QRect
 
 from PyQt5.QtCore import QSize, Qt 
@@ -8,8 +9,9 @@ from PyQt5.QtWidgets import (QAction, QApplication, QCheckBox, QComboBox,
                             QSystemTrayIcon, QLineEdit, QMainWindow, QMenu,
                             QHBoxLayout, QVBoxLayout, QGridLayout
                             )
+from numpy import array
 
-from utils import SnippingTool
+from utils import SnippingTool, BoardWidget
 from fen2png import DrawBoard
 
 
@@ -18,7 +20,7 @@ class FenSettingsWindow(QDialog):
         super().__init__()
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setWindowState(Qt.WindowState.WindowActive)
-        self.setFixedSize(QSize(735, 557))
+        # self.setFixedSize(QSize(735, 557))
 
         self.setWindowTitle('FEN Settings')
         # self.setModal(True)
@@ -29,6 +31,7 @@ class FenSettingsWindow(QDialog):
         self.fenSpecs = ['' if i % 2 != 0 else ' ' for i in range(10)]
         self.fenSpecs[1] = 'w'
         self.fenSpecs[3] = 'KQkq'
+        self.boardSquareSize = 40
 
         self.addHowPlays()
         self.addCasteling()
@@ -44,12 +47,25 @@ class FenSettingsWindow(QDialog):
 
         self.configChanged()
         self.fenLineEdit.setText(self.origFen + ''.join(self.fenSpecs))
-        self.fenUpdateButton.clicked.connect(self.updateFenAndBoard)
 
         self.buttonBox.accepted.connect(self.okPressed)
         self.buttonBox.rejected.connect(self.reject)
 
+        self.testLabel0 = QLabel()
+        self.testLabel1 = QLabel()
+        self.testLabel2 = QLabel()
+        self.boardImage.setMouseTracking(True)
+        self.mainLayout.addWidget(self.testLabel0)
+        self.boardImage.moved.connect(self.testCoords)
+        self.boardImage.leftClick.connect(self.testLeftClick)
+
         self.setLayout(self.mainLayout)
+
+    def testLeftClick(self, lclickx, lclicky):
+        print('left click coordinates:', lclickx, lclicky)
+
+    def testCoords(self, x0, y0):
+        self.testLabel0.setText('event: %.2f, %.2f' % (x0, y0))
 
     def okPressed(self):
         self.accept()
@@ -135,12 +151,7 @@ class FenSettingsWindow(QDialog):
         self.mainLayout.addLayout(castelingLayout)
 
     def addBoard(self, currentFen):
-        self.boardImage = QLabel()
-        board = DrawBoard(currentFen)
-        self.boardImage.setPixmap(board.boardQPixmap())
-        self.boardImage.setAlignment(Qt.AlignHCenter)
-
-
+        self.boardImage = BoardWidget(currentFen, self.boardSquareSize)
         self.mainLayout.addWidget(self.boardImage)
 
     def addFenLineEdit(self):
@@ -148,13 +159,9 @@ class FenSettingsWindow(QDialog):
         fenLabel = QLabel('FEN: ')
         self.fenLineEdit = QLineEdit()
         self.fenLineEdit.setReadOnly(True)
-        self.fenUpdateButton = QPushButton('Update FEN')
-
 
         fenLineEditLayout.addWidget(fenLabel)
         fenLineEditLayout.addWidget(self.fenLineEdit)
-        fenLineEditLayout.addWidget(self.fenUpdateButton)
-
         fenLineEditLayout.setAlignment(Qt.AlignHCenter)
 
         self.mainLayout.addLayout(fenLineEditLayout)
