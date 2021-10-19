@@ -6,6 +6,8 @@ from PyQt5.QtGui import QImage, QPixmap
 
 PIECES = "RBNQKPrbnqkp"
 PIECES_DICT = {i: ("b" if i.islower() else "w") + i.lower() for i in PIECES}
+INV_PIECES_DICT = {vals: keys for keys, vals in PIECES_DICT.items()}
+INV_PIECES_DICT['e'] = 'e'
 ICONS = "resources/pieces/"
 
 
