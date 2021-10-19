@@ -1,18 +1,17 @@
 import sys
 from time import sleep
-from PyQt5.QtCore import QRect
+from functools import partial
 
-from PyQt5.QtCore import QSize, Qt 
+from PyQt5.QtCore import QSize, Qt, QPoint, QRect
 from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtWidgets import (QAction, QApplication, QCheckBox, QComboBox,
                             QLabel, QDialog, QDialogButtonBox, QPushButton,
                             QSystemTrayIcon, QLineEdit, QMainWindow, QMenu,
                             QHBoxLayout, QVBoxLayout, QGridLayout
                             )
-from numpy import array
 
-from utils import SnippingTool, BoardWidget
-from fen2png import DrawBoard
+from utils import SnippingTool, BoardWidget, square_extended_fen_position, extend_fen, compress_fen
+from fen2png import DrawBoard, PIECES_DICT, INV_PIECES_DICT
 
 
 class FenSettingsWindow(QDialog):
@@ -20,10 +19,8 @@ class FenSettingsWindow(QDialog):
         super().__init__()
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setWindowState(Qt.WindowState.WindowActive)
-        # self.setFixedSize(QSize(735, 557))
 
         self.setWindowTitle('FEN Settings')
-        # self.setModal(True)
         self.mainLayout = QVBoxLayout()
 
         self.origFen = fen
@@ -51,21 +48,27 @@ class FenSettingsWindow(QDialog):
         self.buttonBox.accepted.connect(self.okPressed)
         self.buttonBox.rejected.connect(self.reject)
 
-        self.testLabel0 = QLabel()
-        self.testLabel1 = QLabel()
-        self.testLabel2 = QLabel()
+        self.addRightClickMenu()
+        for key, value in self.contextActions.items():
+            value.triggered.connect(partial(self.contextPressed, key))
+
         self.boardImage.setMouseTracking(True)
-        self.mainLayout.addWidget(self.testLabel0)
-        self.boardImage.moved.connect(self.testCoords)
-        self.boardImage.leftClick.connect(self.testLeftClick)
+        self.boardImage.rightClick.connect(self.rightMoueseClick)
 
         self.setLayout(self.mainLayout)
 
-    def testLeftClick(self, lclickx, lclicky):
-        print('left click coordinates:', lclickx, lclicky)
+    def contextPressed(self, piece):
+        file, rank = square_extended_fen_position(self.boardSquareSize, *self.clickCoordinates)
+        splitted_fen = self.fen.split(' ')
+        extended_fen = extend_fen(splitted_fen[0].split('/'))
+        extended_fen[rank] = extended_fen[rank][:file] + INV_PIECES_DICT[piece] + extended_fen[rank][file + 1:]
+        new_fen = ' '.join([compress_fen('/'.join(extended_fen)), *splitted_fen[1:]])
+        self.fenLineEdit.setText(new_fen)
+        self.updateFenAndBoard()
 
-    def testCoords(self, x0, y0):
-        self.testLabel0.setText('event: %.2f, %.2f' % (x0, y0))
+    def rightMoueseClick(self, x, y, e):
+        self.clickCoordinates = [x, y]
+        self.rightClickMenu.exec_(e.globalPos())
 
     def okPressed(self):
         self.accept()
@@ -171,6 +174,15 @@ class FenSettingsWindow(QDialog):
         self.buttonBox = QDialogButtonBox(buttons)
         self.mainLayout.addWidget(self.buttonBox)
 
+    def addRightClickMenu(self):
+        self.rightClickMenu = QMenu(self)
+        self.contextActions = {}
+        for piece in PIECES_DICT.values():
+            icon = QIcon('resources/pieces/' + piece + '.png')
+            self.contextActions[piece]= QAction(icon, '', self)
+            self.rightClickMenu.addAction(self.contextActions[piece])
+        self.contextActions['e'] = QAction('empty', self)
+        self.rightClickMenu.addAction(self.contextActions['e'])
 
 
 class MainWindow(QMainWindow):
@@ -200,7 +212,6 @@ class MainWindow(QMainWindow):
 
         self.icon = QIcon('resources/icons/wk.png')
         self.trayIcon.setIcon(self.icon)
-
 
     def snip(self):
         snipping_tool = SnippingTool()
