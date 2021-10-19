@@ -3,11 +3,11 @@ import numpy as np
 import cv2
 
 from PyQt5.QtCore import QRect, Qt, pyqtSignal
-from PyQt5.QtGui import QColor, QPainter, QPainterPath, QPixmap
+from PyQt5.QtGui import QColor, QMouseEvent, QPainter, QPainterPath, QPixmap
 from PyQt5.QtWidgets import QApplication, QDialog, QLabel
 
-from png2fen import evaluate, visualize_regions
-from fen2png import DrawBoard
+from png2fen import evaluate
+from fen2png import DrawBoard, is_int
 
 
 def pixmap2array(pixmap):
@@ -19,6 +19,54 @@ def pixmap2array(pixmap):
     arr = np.fromstring(s, dtype=np.uint8).reshape((height, width, channels)) 
 
     return arr
+
+def extend_fen(fen):
+    """
+    extends a fen name to be 8 characters long for each row, for easy counting.
+    :param fen_list: list of strings where each string represents a rank position
+    """
+    for i in range(8):
+        jdx = 0
+        for _ in range(len(fen[i])):
+            if is_int(fen[i][jdx]):
+                nempty = int(fen[i][jdx])
+                fen[i] = fen[i][:jdx] + 'e' * nempty + fen[i][jdx + 1:]
+                jdx += nempty
+                continue
+            jdx += 1
+    return fen
+
+def compress_fen(extended_fen):
+    compressed_fen = []
+    fen_ranks = extended_fen.split('/')
+    for rank in fen_ranks:
+        compressed_rank = ''
+        ecount = 0
+        for j, square in enumerate(rank):
+            if square != 'e':
+                if ecount != 0:
+                    compressed_rank += str(ecount)
+                    ecount = 0
+                compressed_rank += square                    
+                continue
+            ecount += 1
+            if j == 7:
+                compressed_rank += str(ecount)
+        compressed_fen.append(compressed_rank)
+
+    return '/'.join(list(filter(None, compressed_fen)))
+
+def square_extended_fen_position(square_size, x, y):
+    file = None
+    rank = None
+    for i in range(8):
+        if x in range(square_size * i, square_size * (i + 1)):
+            file = i
+        if y in range(square_size * i, square_size * (i + 1)):
+            rank = i
+        if file and rank:
+            break
+    return (file, rank)
 
 
 class SnippingTool(QDialog):
@@ -71,8 +119,7 @@ class SnippingTool(QDialog):
 
 
 class BoardWidget(QLabel):
-    leftClick = pyqtSignal(float, float)
-    moved = pyqtSignal(float, float)
+    rightClick = pyqtSignal(float, float, QMouseEvent)
 
     def __init__(self, currentFen, squareSize=40):
         self.squareSize = squareSize
@@ -89,13 +136,5 @@ class BoardWidget(QLabel):
         if event.button() == Qt.RightButton:
             heightMargin = (self.rect().height() - self.pixmap().rect().height()) // 2
             widthMargin = (self.rect().width() - self.pixmap().rect().width()) // 2
-            self.leftClick.emit(event.x() - widthMargin, event.y() - heightMargin)
+            self.rightClick.emit(event.x() - widthMargin, event.y() - heightMargin, event)
         super().mousePressEvent(event)
-
-    def mouseMoveEvent(self, event):
-        heightMargin = (self.rect().height() - self.pixmap().rect().height()) // 2
-        widthMargin = (self.rect().width() - self.pixmap().rect().width()) // 2
-        self.moved.emit(event.x() - widthMargin, event.y() - heightMargin)
-        super().mouseMoveEvent(event)
-
-        
