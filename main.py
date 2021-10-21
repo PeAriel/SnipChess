@@ -109,8 +109,6 @@ class FenSettingsWindow(QDialog):
     def perspectiveChanged(self):
         tmp_fen = self.fen.split()
         fen_position = tmp_fen[0].split('/')[::-1]
-        for i, rank in enumerate(fen_position):
-            fen_position[i] = rank[::-1]
         self.fenLineEdit.setText(' '.join(['/'.join(fen_position), *tmp_fen[1:]]))
         self.updateFenAndBoard()
 
@@ -308,7 +306,6 @@ class MainWindow(QMainWindow):
 
         self.optsWindow = FenSettingsWindow(snipping_tool.fen)
         self.optsWindow.show()
-
 
         if self.optsWindow.exec_():
             self.trayIcon.showMessage('', 'FEN has been successfuly copied to clipboard!',  self.icon, 50 * 1000)
