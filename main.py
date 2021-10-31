@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import (QAction, QApplication, QCheckBox, QComboBox,
                             QHBoxLayout, QVBoxLayout, QGridLayout
                             )
 
-from utils import SnippingTool, BoardWidget, square_extended_fen_position, extend_fen, compress_fen
+from utils import SnippingTool, BoardWidget, square_extended_fen_position, extend_fen, compress_fen, flip_fen
 from fen2png import DrawBoard, PIECES_DICT, INV_PIECES_DICT
 from help_messages import *
 
@@ -138,8 +138,11 @@ class FenSettingsWindow(QDialog):
         self.fenSpecs[5] = self.enPassantComboBox.currentText()
         self.fenSpecs[7] = self.halfMoveText.text()
         self.fenSpecs[9] = self.fullMoveText.text()
-            
-        self.fen = self.origFen + ''.join(self.fenSpecs)
+        
+        if self.perspectiveComboBox.currentIndex() == 0:
+            self.fen = self.origFen + ''.join(self.fenSpecs)
+        else:
+            self.fen = flip_fen(self.origFen) + ''.join(self.fenSpecs)
         self.fenLineEdit.setText(self.fen)
 
     def updateFenAndBoard(self):
