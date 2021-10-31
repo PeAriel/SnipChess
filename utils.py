@@ -56,6 +56,11 @@ def compress_fen(extended_fen):
 
     return '/'.join(list(filter(None, compressed_fen)))
 
+def flip_fen(fen):
+    tmp_fen = fen.split()
+    fen_position = tmp_fen[0].split('/')[::-1]
+    return ' '.join(['/'.join(fen_position), *tmp_fen[1:]])
+
 def square_extended_fen_position(square_size, x, y):
     file = None
     rank = None
