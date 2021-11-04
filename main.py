@@ -10,7 +10,9 @@ from PyQt5.QtWidgets import (QAction, QApplication, QCheckBox, QComboBox,
                             QHBoxLayout, QVBoxLayout, QGridLayout
                             )
 
-from utils import SnippingTool, BoardWidget, square_extended_fen_position, extend_fen, compress_fen, flip_fen
+from utils import (SnippingTool, BoardWidget,
+                   square_extended_fen_position, extend_fen,
+                   compress_fen, flip_fen)
 from fen2png import DrawBoard, PIECES_DICT, INV_PIECES_DICT
 from help_messages import *
 
@@ -26,6 +28,7 @@ class FenSettingsWindow(QDialog):
 
         self.origFen = fen
         self.fen = fen
+        self.boardType = 'w'
         self.fenSpecs = ['' if i % 2 != 0 else ' ' for i in range(10)]
         self.fenSpecs[1] = 'w'
         self.fenSpecs[3] = 'KQkq'
@@ -45,7 +48,7 @@ class FenSettingsWindow(QDialog):
         self.halfMoveText.setText('0')
         self.fullMoveText.setText('20')
 
-        self.whoPlaysComboBox.currentIndexChanged.connect(self.configChanged)
+        self.whoPlaysComboBox.currentIndexChanged.connect(self.whoPlaysChanged)
         self.whoPlaysComboBox.currentIndexChanged.connect(self.changeEnPassant)
         self.perspectiveComboBox.currentIndexChanged.connect(self.perspectiveChanged)
         self.whiteOO.stateChanged.connect(self.configChanged)
@@ -71,6 +74,14 @@ class FenSettingsWindow(QDialog):
 
         self.setLayout(self.mainLayout)
 
+    def whoPlaysChanged(self):
+        if self.whoPlaysComboBox.currentIndex() == 0:
+            self.fenSpecs[1] = 'w'
+        else:
+            self.fenSpecs[1] = 'b'
+        self.fen = self.fen.split()[0] + ''.join(self.fenSpecs)
+        self.fenLineEdit.setText(self.fen)
+
     def changeEnPassant(self):
         if self.whoPlaysComboBox.currentIndex() == 0:
             self.enPassantComboBox.clear()
@@ -82,16 +93,23 @@ class FenSettingsWindow(QDialog):
             self.enPassantComboBox.addItem('-')
             for file in 'abcdefgh':
                 self.enPassantComboBox.addItem(file + '3')
-        self.updateFenAndBoard()
         
     def imageClicked(self, piece):
         file, rank = square_extended_fen_position(self.boardSquareSize, *self.clickCoordinates)
+        if self.boardType == 'b':
+            rank = 7 - rank
         splitted_fen = self.fen.split(' ')
         extended_fen = extend_fen(splitted_fen[0].split('/'))
         extended_fen[rank] = extended_fen[rank][:file] + INV_PIECES_DICT[piece] + extended_fen[rank][file + 1:]
         new_fen = ' '.join([compress_fen('/'.join(extended_fen)), *splitted_fen[1:]])
+        
+        self.fen = new_fen
         self.fenLineEdit.setText(new_fen)
-        self.updateFenAndBoard()
+        if self.boardType == 'w':
+            board = DrawBoard(self.fen, boardtype=self.boardType)
+        else:
+            board = DrawBoard(flip_fen(self.fen), boardtype=self.boardType)
+        self.boardImage.setPixmap(board.boardQPixmap())
 
     def rightMoueseClick(self, x, y, e):
         self.clickCoordinates = [x, y]
@@ -102,22 +120,35 @@ class FenSettingsWindow(QDialog):
         
         cb = QApplication.clipboard()
         cb.clear(mode=cb.Clipboard)
-        cb.setText(self.fen, mode=cb.Clipboard)
+        if self.perspectiveComboBox.currentIndex() == 0:
+            cb.setText(self.fen, mode=cb.Clipboard)
+        else:
+            tmp_fen = self.fen.split()
+            fen_position = tmp_fen[0].split('/')
+            for i, rank in enumerate(fen_position):
+                fen_position[i] = rank[::-1]
+            cb.setText(' '.join(['/'.join(fen_position), *tmp_fen[1:]]), mode=cb.Clipboard)
 
         self.close()        
 
     def perspectiveChanged(self):
+        if self.perspectiveComboBox.currentIndex() == 0:
+            self.boardType = 'w'
+        else:
+            self.boardType = 'b'
         tmp_fen = self.fen.split()
         fen_position = tmp_fen[0].split('/')[::-1]
         self.fenLineEdit.setText(' '.join(['/'.join(fen_position), *tmp_fen[1:]]))
-        self.updateFenAndBoard()
+
+        # Manually update fen and board to avoid unwanted flippings in other calls to the method
+        self.fen = self.fenLineEdit.text()
+        if self.boardType == 'w':
+            board = DrawBoard(self.fen, boardtype=self.boardType)
+        else:
+            board = DrawBoard(flip_fen(self.fen), boardtype=self.boardType)
+        self.boardImage.setPixmap(board.boardQPixmap())
 
     def configChanged(self):
-        if self.whoPlaysComboBox.currentIndex() == 0:
-            self.fenSpecs[1] = 'w'
-        else:
-            self.fenSpecs[1] = 'b'
-        
         castlingPart = []
         if all([not self.whiteOO.isChecked(),
                 not self.whiteOOO.isChecked(),
@@ -139,16 +170,8 @@ class FenSettingsWindow(QDialog):
         self.fenSpecs[7] = self.halfMoveText.text()
         self.fenSpecs[9] = self.fullMoveText.text()
         
-        if self.perspectiveComboBox.currentIndex() == 0:
-            self.fen = self.origFen + ''.join(self.fenSpecs)
-        else:
-            self.fen = flip_fen(self.origFen) + ''.join(self.fenSpecs)
+        self.fen = self.fen.split()[0] + ''.join(self.fenSpecs)
         self.fenLineEdit.setText(self.fen)
-
-    def updateFenAndBoard(self):
-        self.fen = self.fenLineEdit.text()
-        board = DrawBoard(self.fen)
-        self.boardImage.setPixmap(board.boardQPixmap())
 
     def addHowPlays(self):
         self.colorsLayout = QHBoxLayout()
@@ -242,8 +265,7 @@ class FenSettingsWindow(QDialog):
     def addFenLineEdit(self):
         fenLineEditLayout = QHBoxLayout()
         fenLabel = QLabel('FEN: ')
-        self.fenLineEdit = QLineEdit()
-        self.fenLineEdit.setReadOnly(True)
+        self.fenLineEdit = QLabel()
 
         fenLineEditLayout.addWidget(fenLabel)
         fenLineEditLayout.addWidget(self.fenLineEdit)
