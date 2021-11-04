@@ -24,13 +24,13 @@ def is_int(val):
 
 
 class DrawBoard:
-    def __init__(self, fen, square_size=40):
+    def __init__(self, fen, boardtype ='w', square_size=40):
         self.dir = os.getcwd() + '/'
         self.fen = fen.split()[0]
         self.square_size = square_size
         self.piece_size = (square_size, square_size)
         self.board_size = (square_size * 8, square_size * 8)
-        self.output = Image.open(self.dir + ICONS + '/board.png').resize(self.board_size)
+        self.output = Image.open(self.dir + ICONS + '/board%s.png' % boardtype).resize(self.board_size)
 
     def _get_piece_positions(self):
         board = [["" for _ in range(8)] for _ in range(8)]
