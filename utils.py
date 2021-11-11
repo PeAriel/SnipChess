@@ -3,7 +3,7 @@ import numpy as np
 import cv2
 
 from PyQt5.QtCore import QRect, Qt, pyqtSignal
-from PyQt5.QtGui import QColor, QMouseEvent, QPainter, QPainterPath, QPixmap
+from PyQt5.QtGui import QColor, QCursor, QIcon, QMouseEvent, QPainter, QPainterPath, QPixmap
 from PyQt5.QtWidgets import QApplication, QDialog, QLabel
 
 from png2fen import evaluate
@@ -77,7 +77,8 @@ def square_extended_fen_position(square_size, x, y):
 class SnippingTool(QDialog):
     def __init__(self):
         super().__init__()
-
+        
+        self.setCursor(Qt.CrossCursor)
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setWindowState(Qt.WindowState.WindowActive)
