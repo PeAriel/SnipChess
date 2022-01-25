@@ -259,7 +259,7 @@ class FenSettingsWindow(QDialog):
         self.mainLayout.addLayout(settingsLayout)
 
     def addBoard(self, currentFen):
-        self.boardImage = BoardWidget(currentFen, self.boardSquareSize)
+        self.boardImage = BoardWidget(currentFen, self.boardSquareSize, dark=True)
         self.mainLayout.addWidget(self.boardImage)
 
     def addFenLineEdit(self):

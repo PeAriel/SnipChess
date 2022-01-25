@@ -127,12 +127,12 @@ class SnippingTool(QDialog):
 class BoardWidget(QLabel):
     rightClick = pyqtSignal(float, float, QMouseEvent)
 
-    def __init__(self, currentFen, squareSize=40):
+    def __init__(self, currentFen, squareSize=40, dark=True):
         self.squareSize = squareSize
         super().__init__()
 
         board = DrawBoard(currentFen, square_size=self.squareSize)
-        self.boardPixmap = board.boardQPixmap()
+        self.boardPixmap = board.boardQPixmap(dark)
         self.setPixmap(self.boardPixmap)
         self.setAlignment(Qt.AlignHCenter)
 

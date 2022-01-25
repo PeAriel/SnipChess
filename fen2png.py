@@ -2,6 +2,7 @@ import os
 
 from PIL import Image
 import numpy as np
+import cv2
 from PyQt5.QtGui import QImage, QPixmap
 
 PIECES = "RBNQKPrbnqkp"
@@ -60,10 +61,12 @@ class DrawBoard:
                 if positions[i][j]:
                     self._insert_piece((i, j), positions[i][j])
 
-    def boardQPixmap(self):
+    def boardQPixmap(self, dark=True):
         self._add_pieces()
         pil_image = self.output.convert('RGB') 
-        cv_image = np.array(pil_image) 
+        cv_image = np.array(pil_image)
+        if not dark:
+            cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
         # Convert RGB to BGR 
         cvImg = cv_image[:, :, ::-1].copy()
 
